@@ -1,10 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
+import { WorkspaceProvider } from "@/app/_context/WorkspaceContext";
 import WorkSpaceHeader from "../_components/WorkSpaceHeader";
 import dynamic from "next/dynamic";
 import { FILE } from "../../dashboard/_components/DashboardTable";
@@ -17,8 +13,7 @@ const Canvas = dynamic(() => import("../_components/Canvas"), {
   ssr: false,
 });
 
-const Workspace = ({ params }: any) => {
-  // Mock file data
+const WorkspaceInner = ({ params }: any) => {
   const [fileData, setFileData] = useState<FILE>({
     id: params.fileId || "default",
     fileName: "Untitled Document",
@@ -27,12 +22,20 @@ const Workspace = ({ params }: any) => {
 
   const Tabs = [
     { name: "Document" },
-    { name: "Both" },
+    { name: "Both" }, 
     { name: "Canvas" }
   ];
 
   const [activeTab, setActiveTab] = useState(Tabs[1].name);
   const [triggerSave, setTriggerSave] = useState(false);
+
+  // Define scaling factors
+  const getScale = (component: 'editor' | 'canvas') => {
+    if (activeTab === "Both") {
+      return 0.85; // Slightly reduced size for split view
+    }
+    return 1; // Full size for single view
+  };
 
   return (
     <div className="overflow-hidden w-full">
@@ -43,42 +46,64 @@ const Workspace = ({ params }: any) => {
         onSave={() => setTriggerSave(!triggerSave)}
         file={fileData}
       />
-      {activeTab === "Document" ? (
-        <div style={{ height: "calc(100vh - 3rem)" }}>
+
+      {/* Document View */}
+      <div style={{ 
+        height: "calc(100vh - 3rem)",
+        display: activeTab === "Document" ? "block" : "none" 
+      }}>
+        <Editor
+          onSaveTrigger={triggerSave}
+          fileId={params.fileId}
+          fileData={fileData}
+          scale={getScale('editor')}
+        />
+      </div>
+
+      {/* Both View */}
+      <div style={{ 
+        height: "calc(100vh - 3rem)",
+        display: activeTab === "Both" ? "flex" : "none",
+        gap: '1rem',
+        padding: '0.5rem'
+      }}>
+        <div style={{ flex: 1 }}>
           <Editor
             onSaveTrigger={triggerSave}
             fileId={params.fileId}
             fileData={fileData}
+            scale={getScale('editor')}
           />
         </div>
-      ) : activeTab === "Both" ? (
-        <ResizablePanelGroup style={{ height: "calc(100vh - 3rem)" }} direction="horizontal">
-          <ResizablePanel defaultSize={50} minSize={40} collapsible={false}>
-            <Editor
-              onSaveTrigger={triggerSave}
-              fileId={params.fileId}
-              fileData={fileData}
-            />
-          </ResizablePanel>
-          <ResizableHandle className="bg-neutral-600" />
-          <ResizablePanel defaultSize={50} minSize={45}>
-            <Canvas
-              onSaveTrigger={triggerSave}
-              fileId={params.fileId}
-              fileData={fileData}
-            />
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      ) : activeTab === "Canvas" ? (
-        <div style={{ height: "calc(100vh - 3rem)" }}>
+        <div style={{ flex: 1 }}>
           <Canvas
-            onSaveTrigger={triggerSave}
             fileId={params.fileId}
             fileData={fileData}
+            scale={getScale('canvas')}
           />
         </div>
-      ) : null}
+      </div>
+
+      {/* Canvas View */}
+      <div style={{ 
+        height: "calc(100vh - 3rem)",
+        display: activeTab === "Canvas" ? "block" : "none" 
+      }}>
+        <Canvas
+          fileId={params.fileId}
+          fileData={fileData}
+          scale={getScale('canvas')}
+        />
+      </div>
     </div>
+  );
+};
+
+const Workspace = ({ params }: any) => {
+  return (
+    <WorkspaceProvider>
+      <WorkspaceInner params={params} />
+    </WorkspaceProvider>
   );
 };
 

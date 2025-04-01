@@ -1,83 +1,61 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Excalidraw, MainMenu, WelcomeScreen } from "@excalidraw/excalidraw";
 import { FILE } from "../../dashboard/_components/DashboardTable";
-import { toast } from "sonner";
+import { useWorkspace } from "@/app/_context/WorkspaceContext";
 
-const Canvas = ({
-  onSaveTrigger,
-  fileId,
-  fileData,
-}: {
-  onSaveTrigger: any;
-  fileId: any;
+type CanvasProps = {
+  fileId: string;
   fileData: FILE;
-}) => {
-  const [whiteBoard, setWhiteBoard] = useState<any>();
+  forwardedRef?: React.ForwardedRef<any>;
+};
 
-  // Mock save functionality
+const Canvas = ({ fileId, fileData, scale = 1 }: CanvasProps & { scale?: number }) => {
+  const { canvasContent, setCanvasContent } = useWorkspace();
+  const [excalidrawAPI, setExcalidrawAPI] = useState<any>(null);
+
+  // Initialize with saved content or file data
   useEffect(() => {
-    if (onSaveTrigger) {
-      toast.success("Canvas saved (demo mode)");
+    if (excalidrawAPI) {
+      const initialData = canvasContent || 
+        (fileData?.whiteboard ? JSON.parse(fileData.whiteboard) : []);
+      excalidrawAPI.updateScene({ elements: initialData });
     }
-  }, [onSaveTrigger]);
+  }, [fileId, excalidrawAPI]);
 
   return (
-    <div className="h-full w-full">
-      {fileData?.whiteboard ? (
-        <Excalidraw
-          theme="dark"
-          initialData={{
-            elements: fileData && JSON.parse(fileData?.whiteboard),
-          }}
-          UIOptions={{
-            canvasActions: {
-              export: false,
-              loadScene: false,
-              saveAsImage: false,
-            },
-          }}
-          onChange={(excaliDrawElements) => {
-            setWhiteBoard(excaliDrawElements);
-          }}
-        >
-          <MainMenu>
-            <MainMenu.DefaultItems.ClearCanvas />
-            <MainMenu.DefaultItems.Help />
-            <MainMenu.DefaultItems.ChangeCanvasBackground />
-          </MainMenu>
-          <WelcomeScreen>
-            <WelcomeScreen.Hints.MenuHint />
-            <WelcomeScreen.Hints.ToolbarHint />
-            <WelcomeScreen.Hints.HelpHint />
-          </WelcomeScreen>
-        </Excalidraw>
-      ) : (
-        <Excalidraw
-          theme="dark"
-          UIOptions={{
-            canvasActions: {
-              export: false,
-              loadScene: false,
-              saveAsImage: false,
-            },
-          }}
-          onChange={(excaliDrawElements) => {
-            setWhiteBoard(excaliDrawElements);
-          }}
-        >
-          <MainMenu>
-            <MainMenu.DefaultItems.ClearCanvas />
-            <MainMenu.DefaultItems.Help />
-            <MainMenu.DefaultItems.ChangeCanvasBackground />
-          </MainMenu>
-          <WelcomeScreen>
-            <WelcomeScreen.Hints.MenuHint />
-            <WelcomeScreen.Hints.ToolbarHint />
-            <WelcomeScreen.Hints.HelpHint />
-          </WelcomeScreen>
-        </Excalidraw>
-      )}
+    <div 
+      className="transition-transform duration-300 ease-in-out"
+      style={{
+        transform: `scale(${scale})`, 
+        transformOrigin: 'top left',
+        width: `${100/scale}%`,
+        height: `${100/scale}%`
+      }}
+    >
+      <Excalidraw
+        excalidrawAPI={(api) => setExcalidrawAPI(api)}
+        theme="dark"
+        onChange={(elements) => setCanvasContent(elements)}
+        UIOptions={{
+          canvasActions: {
+            export: false,
+            loadScene: false,
+            saveAsImage: false,
+          },
+        }}
+      >
+        <MainMenu>
+          <MainMenu.DefaultItems.ClearCanvas />
+          <MainMenu.DefaultItems.Help />
+          <MainMenu.DefaultItems.ChangeCanvasBackground />
+        </MainMenu>
+        <WelcomeScreen>
+          <WelcomeScreen.Hints.MenuHint />
+          <WelcomeScreen.Hints.ToolbarHint />
+          <WelcomeScreen.Hints.HelpHint />
+        </WelcomeScreen>
+      </Excalidraw>
     </div>
   );
 };

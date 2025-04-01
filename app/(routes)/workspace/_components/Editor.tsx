@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState } from "react";
+import { useWorkspace } from "@/app/_context/WorkspaceContext";
 import EditorJs from "@editorjs/editorjs";
 import Header from "@editorjs/header";
 // @ts-ignore
@@ -28,16 +29,29 @@ const Editor = ({
   onSaveTrigger,
   fileId,
   fileData,
+  scale = 1
 }: {
   onSaveTrigger: any;
   fileId: any;
   fileData: FILE;
+  scale?: number;
 }) => {
   const ref = useRef<EditorJs>();
-  const [document, setDocument] = useState(rawDocument);
+  const { documentContent, setDocumentContent } = useWorkspace();
+  const [document, setDocument] = useState(documentContent || rawDocument);
+  
+  console.log('Editor component - documentContent:', documentContent);
 
   useEffect(() => {
-    fileData && initEditor();
+    if (fileData && !ref.current) {
+      initEditor();
+    }
+    return () => {
+      if (ref.current) {
+        ref.current.destroy();
+        ref.current = undefined;
+      }
+    };
   }, [fileData]);
 
   useEffect(() => {
@@ -61,7 +75,7 @@ const Editor = ({
         list: List,
         checklist: checkList,
       },
-      data: fileData.document ? JSON.parse(fileData.document) : document,
+      data: documentContent || (fileData.document ? JSON.parse(fileData.document) : document),
     });
     editor.isReady.then(() => {
       ref.current = editor;
@@ -70,13 +84,22 @@ const Editor = ({
 
   const onDocumentSave = async () => {
     if (ref.current) {
-      await ref.current.save();
+      const savedData = await ref.current.save();
+      setDocumentContent(savedData);
       toast.success("Document Saved (demo mode)");
     }
   };
 
   return (
-    <div className="p-2">
+    <div 
+      className="p-2 transition-transform duration-300 ease-in-out"
+      style={{
+        transform: `scale(${scale})`,
+        transformOrigin: 'top left',
+        width: `${100/scale}%`,
+        height: `${100/scale}%`
+      }}
+    >
       <div
         className="text-white selection:text-black selection:bg-neutral-400 overflow-x-hidden overflow-y-auto w-full pr-4 pl-2 h-[85vh] mb-4"
         id="editorjs"
